@@ -1,0 +1,52 @@
+{
+  "name": "next.js-ai-knowledge-tester",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "ingest": "tsx ingestion/run-ingestion.tsx"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^4.0.25",
+    "@ai-sdk/react": "^4.0.47",
+    "@vercel/functions": "^1.6.0",
+    "@contentful/rich-text-react-renderer": "^16.2.1",
+    "@neondatabase/serverless": "^1.1.0",
+    "@openrouter/ai-sdk-provider": "^3.0.0",
+    "@tavily/core": "^0.7.6",
+    "@types/leaflet": "^1.9.22",
+    "ai": "^7.0.44",
+    "cheerio": "^1.2.0",
+    "clsx": "^2.1.1",
+    "contentful": "^11.12.6",
+    "framer-motion": "^12.42.2",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^1.24.0",
+    "marked": "^18.0.6",
+    "next": "16.2.10",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-leaflet": "^5.0.0",
+    "react-markdown": "^10.1.0",
+    "streamdown": "^2.5.0",
+    "tsx": "^4.23.9",
+    "unpdf": "^1.8.0",
+    "ws": "^8.21.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@contentful/rich-text-types": "^17.2.7",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/ws": "^8.18.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.10",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

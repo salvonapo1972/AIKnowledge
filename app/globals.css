@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+:root{
+  --background:#F8F5F0;
+  --foreground:#2E2B27;
+
+  --gold:#D4AF37;
+  --brown:#8B5E3C;
+  --green:#6E8B74;
+}
+
+.prose h1 { @apply text-2xl font-bold my-4; }
+.prose h2 { @apply text-xl font-bold my-3; }
+.prose h3 { @apply text-lg font-bold my-2; }
+.prose p { @apply my-2 leading-relaxed; }
+.prose ul { @apply list-disc pl-5 my-2; }
+.prose ol { @apply list-decimal pl-5 my-2; }
+.prose code { @apply bg-gray-200 dark:bg-gray-800 px-1 py-0.5 rounded font-mono text-sm; }
+.prose pre { @apply bg-gray-900 text-white p-4 rounded-lg my-3 overflow-x-auto font-mono text-sm; }
+
+/* Contenitore principale della chat */
+.chat-container {
+      scroll-behavior: smooth;
+    background-color: #f9f9f9;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    width: 100%;
+    height: auto;
+    padding: 20px;
+    overflow: hidden auto;
+    max-width: 1460px;
+    margin-top: 20px;
+    margin-left: 20px;
+}
+
+.shadow-lg{
+  background-color: white;
+}
+
+.song a {
+  color:black;
+  
+}
+
+.bckchat {
+  width: 100%;
+      min-height: 100vh;
+      
+      /* Gradiente azzurro/sfumato integrato con l'immagine */
+      background: 
+        linear-gradient(180deg, rgba(235, 243, 255, 0.2) 0%, #eaf2ff 100%);
+      
+      background-repeat: no-repeat;
+      background-position: center center;
+      background-size: cover; /* Mantiene l'immagine riempita su tutto lo schermo */
+      
+      display: flex;
+      justify-content: center;
+      align-items: center;
+}
+
+.song a:hover {
+  text-decoration:underline;
+}
+
+.underline {
+    text-decoration: underline;
+}
+
+.whitespace-pre-wrap {
+    white-space: normal !important;
+}
+
+/* Messaggi */
+.message {
+  margin-bottom: 15px;
+  padding: 10px;
+  border-radius: 6px;
+  line-height: 1.4;
+}
+.user { background-color: #e3f2fd; align-self: flex-end; }
+.ai { background-color: #f1f1f1; min-height: 50px; }
+
+/* --- Personalizzazione della Scrollbar (Opzionale ma consigliata) --- */
+
+/* width */
+.chat-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+/* Binario della scrollbar (sfondo) */
+.chat-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+/* Maniglia della scrollbar (la parte che si trascina) */
+.chat-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+/* Cambia colore quando l'utente passa sopra con il mouse */
+.chat-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+
+body{
+  background:var(--background);
+  color:var(--foreground);
+  font-family:var(--font-body);
+}
+
+h1,h2,h3,h4{
+  font-family:var(--font-title);
+}
+
+html{
+  scroll-behavior:smooth;
+}
+
+section{
+  padding:90px 0;
+}
+
+.container{
+  max-width:1280px;
+  margin:auto;
+  padding-inline:24px;
+}
+
+.gold{
+  color:var(--gold);
+}
+
+.btn-primary{
+  background:var(--gold);
+  color:#222;
+  padding:14px 28px;
+  border-radius:999px;
+  font-weight:600;
+  transition:.3s;
+}
+
+.btn-primary:hover{
+  transform:translateY(-3px);
+  box-shadow:0 15px 35px rgba(212,175,55,.4);
+}
+
+.btn-secondary{
+  border:1px solid white;
+  color:white;
+  padding:14px 28px;
+  border-radius:999px;
+}
+
+nav a::after{
+    content:"";
+    position:absolute;
+    left:0;
+    bottom:-6px;
+    width:0;
+    height:2px;
+    background:var(--gold);
+    transition:.3s;
+}
+
+.bckelenco{
+  background: radial-gradient(
+        circle at 0% 0%, 
+        #fadc8a 0%,    /* Luce dorata brillante iniziale */
+        #a57f41 25%,   /* Tono medio oro brunito */
+        #331b07 60%,   /* Marrone scuro e profondo */
+        #010101 100%   /* Fondo scuro/nero d'atmosfera */
+    );
+    background-attachment: fixed;
+}
+
+nav a:hover::after{
+    width:100%;
+}
+
+header{
+    transition:all .4s ease;
+}
+
