@@ -40,6 +40,15 @@ export default function Hero() {
           transition={{ delay:.2,duration:.8 }}
           className="max-w-5xl text-6xl font-bold leading-tight md:text-8xl"
         >
+
+           Chatta
+          <br />
+
+          <span className="text-amber-300">
+            con me
+          </span>
+
+         
          
         </motion.h1>
 
