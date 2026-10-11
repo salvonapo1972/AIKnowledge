@@ -10,6 +10,8 @@ export default function ChatPage() {
   const [dots, setDots] = useState('');
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+   const [isListening, setIsListening] = useState(false);
+    const recognitionRef = useRef<any>(null);
   
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -35,6 +37,54 @@ export default function ChatPage() {
 
   const botAvatar = "/avatar.svg";
   const userAvatar = "/avatar_human.svg";
+
+ // INIZIALIZZAZIONE DEL RICONOSCIMENTO VOCALE (Eseguito lato client in sicurezza)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'it-IT';
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onstart = () => setIsListening(true);
+        recognition.onend = () => setIsListening(false);
+        
+        recognition.onerror = (event: any) => {
+          console.error("Errore microfono:", event.error);
+          setIsListening(false);
+        };
+
+        recognition.onresult = async (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          if (transcript.trim()) {
+            // Sintassi v7: invio diretto tramite sendMessage con l'oggetto text
+            setIsLoading(true);
+            await sendMessage({ text: transcript });
+          }
+        };
+
+        recognitionRef.current = recognition;
+      }
+    }
+  }, [sendMessage]);
+
+  // Gestione click sul pulsante del microfono
+  const toggleVoiceInput = () => {
+    if (!recognitionRef.current) {
+      alert("Il tuo browser o dispositivo non supporta il riconoscimento vocale.");
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      setIsListening(true);
+      recognitionRef.current.start();
+    }
+  };
 
   // Recupero delle coordinate
   useEffect(() => {
@@ -206,9 +256,29 @@ export default function ChatPage() {
               type="text" 
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Scrivi un messaggio..." 
+              placeholder="Scrivi un messaggio o usa il microfono" 
               className="flex-1 px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border-none rounded-xl text-base text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             />
+             {/* Pulsante Microfono Vocale */}
+          <button
+            type="button"
+            onClick={toggleVoiceInput}
+            disabled={isLoading}
+            className={`p-2 rounded-xl transition-all duration-200 ${
+              isListening 
+                ? 'bg-red-500 text-white animate-pulse scale-105' 
+                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50'
+            }`}
+            title={isListening ? "Ascoltando... Clicca per fermare" : "Attiva microfono"}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {isListening ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19a1 1 0 01-1-1v-1a5 5 0 01-5-5a1 1 0 012 0a3 3 0 006 0a1 1 0 012 0a5 5 0 01-5 5v1a1 1 0 01-1 1zm3-8a3 3 0 10-6 0v1a3 3 0 006 0v-1z" />
+              )}
+            </svg>
+          </button>
             <button 
               type="submit" 
               disabled={!input.trim() || isLoading}

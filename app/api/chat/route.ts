@@ -57,13 +57,16 @@ function convertTime(date: string | Date, timeZone: string): string {
 const fileContent = await fs.readFile(process.cwd() + '/app/elenco_canti.md', 'utf8');
 export async function POST(req: Request) {
 
-  const { messages, coordinates } = await req.json();
+  const { messages, coordinates,voiceEnabled  } = await req.json();
 
   //console.log("Coordinate da metadati:", messages);
   const today = new Date()
 
 //  console.log('coord', coordinates);
-  const systemPrompt = `Oggi è ${today} e l'utente si trova a: latitudine ${coordinates.lat} e longitudine ${coordinates.lng}`;
+  const systemPrompt = `Oggi è ${today.toISOString()} e l'utente si trova a: latitudine ${coordinates?.lat} e longitudine ${coordinates?.lng}.
+${voiceEnabled ? "L'utente sta parlando a voce. Rispondi in modo estremamente conciso, colloquiale e naturale, evitando elenchi puntati lunghi o Markdown complesso." : ""}`;
+
+
 
   const result = streamText({
     //  model: openai('gpt-5-mini'),
@@ -425,7 +428,9 @@ export async function POST(req: Request) {
         },
       }),
     },
+    
   });
 
   return result.toUIMessageStreamResponse();
+
 }
