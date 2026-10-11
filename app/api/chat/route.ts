@@ -59,7 +59,7 @@ export async function POST(req: Request) {
 
   const { messages, coordinates,voiceEnabled  } = await req.json();
 
-  //console.log("Coordinate da metadati:", messages);
+  console.log("Coordinate da metadati:", coordinates);
   const today = new Date()
 
 //  console.log('coord', coordinates);

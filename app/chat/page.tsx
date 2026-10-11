@@ -4,6 +4,7 @@ import { useChat } from '@ai-sdk/react';
 import { useState, useRef, useEffect } from 'react';
 import { Streamdown } from 'streamdown';
 import dynamic from 'next/dynamic';
+import { DefaultChatTransport } from 'ai';
 
 export default function ChatPage() {
   const [coords, setCoords] = useState({ lat: 0, lng: 0 });
@@ -29,6 +30,12 @@ export default function ChatPage() {
 
   // Inizializzazione useChat
   const { messages, sendMessage } = useChat({
+    
+    transport: new DefaultChatTransport({
+    body: () => ({
+      coordinates: coords 
+    })
+  }),
     onFinish: () => {
       setIsLoading(false);
       setTimeout(scrollToBottom, 30);
@@ -91,10 +98,12 @@ export default function ChatPage() {
     if (typeof window !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          
           setCoords({
             lat: position.coords.latitude,
             lng: position.coords.longitude,
           });
+          
         },
         (error) => console.error("Errore geolocalizzazione:", error),
         { enableHighAccuracy: true }
@@ -242,12 +251,9 @@ export default function ChatPage() {
           <form 
             onSubmit={(e) => {
               e.preventDefault();
-              if (!input.trim()) return;
+              if (!input.trim()) return;  
               setIsLoading(true);
-              sendMessage({ text: input },
-                        {  body: {
-                           coordinates: coords
-                         }});
+              sendMessage({ text: input });
               setInput('');
             }}
             className="flex gap-2"
