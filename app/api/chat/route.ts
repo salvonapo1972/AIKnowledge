@@ -81,7 +81,7 @@ export async function POST(req: Request) {
   // Verifica se l'utente è loggato ed è l'amministratore ufficiale
   const isMe = session?.user?.email === process.env.ADMIN_EMAIL;
   
-/*  const transport = new StdioClientTransport({
+  const transport = new StdioClientTransport({
     command: 'npx',
     args: ['-y', '@contentful/mcp-server'],
     env: {
@@ -91,7 +91,7 @@ export async function POST(req: Request) {
       PATH: process.env.PATH ?? '', // Indispensabile per far trovare npx a Node.js
     },
   });
-
+/*
 const transport = new SSEClientTransport(
   new URL("https://mcp.contentful.com/mcp"),
   {
@@ -113,8 +113,8 @@ const transport = new SSEClientTransport(
 */
   // 2. Crea il client MCP
   console.log("isMe",isMe)
- /* const mcpClientContentful = await createMCPClient({ transport });
-  const contentfulTools = (isMe)?await mcpClientContentful.tools():({});*/
+  const mcpClientContentful = await createMCPClient({ transport });
+  const contentfulTools = (isMe)?await mcpClientContentful.tools():({});
 
   const { messages, coordinates, voiceEnabled } = await req.json();
 
@@ -140,7 +140,7 @@ ${voiceEnabled ? "L'utente sta parlando a voce. Rispondi in modo estremamente co
     },
     tools: {
       ...(isMe?githubTools:({})),
-    //  ...(isMe?contentfulTools:({})),
+      ...(isMe?contentfulTools:({})),
       deleteFileFromGitHub: tool({
         description: 'Elimina definitivamente un file specifico da un repository GitHub.',
         inputSchema: z.object({
