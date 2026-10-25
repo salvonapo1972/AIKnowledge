@@ -609,6 +609,7 @@ ${voiceEnabled ? "L'utente sta parlando a voce. Rispondi in modo estremamente co
         },
       }),
     },
+    
     // Rilascia le risorse solo quando l'AI ha finito TUTTI i passaggi
 /*    onFinish: async () => {
       try {
