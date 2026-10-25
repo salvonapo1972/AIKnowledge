@@ -18,16 +18,33 @@ import { getWeather } from "../../lib/weather";
 import { getCoordinates } from "../../lib/cities";
 import { getTimezone } from '@/app/lib/timezones';
 import { db } from '@/app/lib/db';
-import { getGplStations} from '@/app/lib/gplstations';
+import { Octokit } from '@octokit/rest';
+import { createGithubTools } from '@github-tools/sdk';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
+import { createMCPClient } from '@ai-sdk/mcp';
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 
 
 import { tavily } from '@tavily/core';
 import { getEarthQuakes } from '@/app/lib/earthquake';
 import { getFarmacieTurno } from '@/app/lib/farmacieturno';
+import { auth } from "@/auth";
+
+const githubTools = createGithubTools({
+  token: process.env.GITHUB_TOKEN,
+  preset: ['repo-explorer', 'maintainer'],
+  requireApproval: false
+});
 
 // Inizializza il client usando la tua chiave API di Tavily
 const client = tavily({
   apiKey: process.env.TAVILY_API_KEY
+});
+
+
+
+const octokit = new Octokit({
+  auth: process.env.GITHUB_TOKEN,
 });
 
 const openrouter = createOpenRouter({
@@ -55,22 +72,45 @@ function convertTime(date: string | Date, timeZone: string): string {
   });
 }
 const fileContent = await fs.readFile(process.cwd() + '/app/elenco_canti.md', 'utf8');
+
+
 export async function POST(req: Request) {
 
-  const { messages, coordinates,voiceEnabled  } = await req.json();
+   const session = await auth();
+  
+  // Verifica se l'utente è loggato ed è l'amministratore ufficiale
+  const isMe = session?.user?.email === process.env.ADMIN_EMAIL;
+  
+  const transport = new StdioClientTransport({
+    command: 'npx',
+    args: ['-y', '@contentful/mcp-server'],
+    env: {
+      CONTENTFUL_MANAGEMENT_ACCESS_TOKEN: process.env.WRITE_ACCESS_TOKEN!,
+      SPACE_ID: process.env.SPACE_ID!,
+      ENVIRONMENT_ID: 'master',
+      PATH: process.env.PATH ?? '', // Indispensabile per far trovare npx a Node.js
+    },
+  });
 
-  console.log("Coordinate da metadati:", coordinates);
+  // 2. Crea il client MCP
+  console.log("isMe",isMe)
+  const mcpClientContentful = await createMCPClient({ transport });
+  const contentfulTools = (isMe)?await mcpClientContentful.tools():({});
+
+  const { messages, coordinates, voiceEnabled } = await req.json();
+
+  //console.log("Coordinate da metadati:", coordinates);
   const today = new Date()
 
-//  console.log('coord', coordinates);
+
   const systemPrompt = `Oggi è ${today.toISOString()} e l'utente si trova a: latitudine ${coordinates?.lat} e longitudine ${coordinates?.lng}.
-${voiceEnabled ? "L'utente sta parlando a voce. Rispondi in modo estremamente conciso, colloquiale e naturale, evitando elenchi puntati lunghi o Markdown complesso." : ""}`;
+${voiceEnabled ? "L'utente sta parlando a voce. Rispondi in modo estremamente conciso, colloquiale e naturale, evitando elenchi puntati lunghi o Markdown complesso. Per qualsiasi operazione " +
+      "richiesta sui repository devi  utilizzare esclusivamente githubTools. Se ci sono errori su github devi mostrarli a video nella risposta. Per richieste di creazione contenuti usa il tool mcpClientContentful" : ""}`;
 
 
 
   const result = streamText({
-    //  model: openai('gpt-5-mini'),
-    model: openai('gpt-5.6-luna'),
+    model: openai('gpt-6-luna'),
     messages: await convertToModelMessages(messages),
     system: systemPrompt,
     stopWhen: isStepCount(20),
@@ -80,6 +120,128 @@ ${voiceEnabled ? "L'utente sta parlando a voce. Rispondi in modo estremamente co
       recordOutputs: false
     },
     tools: {
+      ...(isMe?githubTools:({})),
+      ...(isMe?contentfulTools:({})),
+      deleteFileFromGitHub: tool({
+        description: 'Elimina definitivamente un file specifico da un repository GitHub.',
+        inputSchema: z.object({
+          owner: z.string().describe('Il proprietario del repository (username o organizzazione).'),
+          repo: z.string().describe('Il nome del repository.'),
+          path: z.string().describe('Il percorso del file da eliminare (es. test1.md).'),
+          branch: z.string().optional().default('main').describe('La branca da cui eliminare il file.'),
+        }),
+        execute: async ({ owner, repo, path, branch }) => {
+          try {
+            // 1. Recupera lo SHA corrente del file (GitHub lo richiede per confermare l'eliminazione)
+            const { data: fileData } = await octokit.repos.getContent({
+              owner,
+              repo,
+              path,
+              ref: branch,
+            });
+
+            if (Array.isArray(fileData) || fileData.type !== 'file') {
+              throw new Error('Il percorso specificato non corrisponde a un file valido.');
+            }
+
+            // 2. Esegui la cancellazione effettiva passandogli lo SHA trovato
+            await octokit.repos.deleteFile({
+              owner,
+              repo,
+              path,
+              message: `chore: delete ${path} via AI Agent`,
+              sha: fileData.sha,
+              branch,
+            });
+
+            return {
+              success: true,
+              message: `Il file ${path} è stato eliminato con successo.`,
+            };
+          } catch (error: any) {
+            return {
+              success: false,
+              error: error.message || 'Impossibile eliminare il file. Verifica che esista.',
+            };
+          }
+        },
+      }),
+      listIssues: tool({
+        description: 'Recupera la lista delle issue da una specifica repository di GitHub.',
+        inputSchema: z.object({
+          owner: z.string().describe('Il proprietario della repository o organizzazione GitHub.'),
+          repo: z.string().describe('Il nome del repository.'),
+          state: z.enum(['open', 'closed', 'all']).optional().default('open').describe('Lo stato delle issue da cercare.'),
+        }),
+        execute: async ({ owner, repo, state }) => {
+          console.log('owner', owner);
+          console.log('repo', repo);
+          const { data } = await octokit.issues.listForRepo({
+            owner,
+            repo,
+            state,
+            per_page: 5,
+          });
+
+          return data.map(issue => ({
+            id: issue.id,
+            number: issue.number,
+            title: issue.title,
+            state: issue.state,
+            body: issue.body,
+          }));
+        },
+      }),
+
+      // TOOL 2: Creazione di una nuova Issue
+      createGitHubIssue: tool({
+        description: 'Crea una nuova issue su una repository GitHub.',
+        inputSchema: z.object({
+          owner: z.string().describe('Il proprietario della repository.'),
+          repo: z.string().describe('Il nome del repository.'),
+          title: z.string().min(5).describe('Il titolo dell\'issue (almeno 5 caratteri).'),
+          body: z.string().describe('La descrizione dettagliata del problema o del task.'),
+          labels: z.array(z.string()).optional().describe('Etichette da assegnare all\'issue.'),
+        }),
+        execute: async ({ owner, repo, title, body, labels }) => {
+          const { data } = await octokit.issues.create({
+            owner,
+            repo,
+            title,
+            body,
+            labels,
+          });
+
+          return {
+            success: true,
+            issueNumber: data.number,
+            url: data.html_url,
+          };
+        },
+      }),
+      closeGitHubIssue: tool({
+        description: 'Crea una nuova issue su una repository GitHub.',
+        inputSchema: z.object({
+          owner: z.string().describe('Il proprietario del repository (username o organizzazione).'),
+          repo: z.string().describe('Il nome del repository.'),
+          issue_number: z.number().int().positive().describe('Il numero identificativo dell\'issue da chiudere (es. 42).'),
+        }),
+        execute: async ({ owner, repo, issue_number }) => {
+          const { data } = await octokit.issues.update({
+            owner,
+            repo,
+            issue_number,
+            state: 'closed',
+            state_reason: 'completed',
+          });
+
+          return {
+            success: true,
+            issueNumber: data.number,
+            url: data.html_url,
+          };
+        },
+      }),
       getCityFromCoordinates: tool({
         description: 'Converte le coordinate di latitudine e longitudine nel nome di una città reale. se non valorizzate trova la città in cui ci si trova e indirizzo esatto',
         inputSchema: z.object({
@@ -91,17 +253,17 @@ ${voiceEnabled ? "L'utente sta parlando a voce. Rispondi in modo estremamente co
           console.log('getCityFromCoordinates1');
           const lat = latitudecity ?? coordinates.lat;
           const lng = longitudecity ?? coordinates.lng;
-         // console.log('lng', lng);
+          // console.log('lng', lng);
           // 2. Corretto URL di OpenStreetMap (Nominatim API)
           const response = await fetch(
             `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
             { headers: { 'User-Agent': 'Vercel-AI-SDK-App' } }
           );
           if (!response.ok) {
-            console.log("err:",response.status);
+            console.log("err:", response.status);
             throw new Error(`Errore API Nominatim: HTTP ${response.status}`);
           }
-        //  console.log('response', response);
+          //  console.log('response', response);
           const data = await response.json();
           //console.log('data', data);
           // . Estrazione sicura con optional chaining
@@ -110,7 +272,7 @@ ${voiceEnabled ? "L'utente sta parlando a voce. Rispondi in modo estremamente co
 
           // 1. Gestione stringa principale: se l'intero oggetto o display_name manca
           const formattedAddress = data?.display_name ?? 'Indirizzo non disponibile per queste coordinate';
-         // console.log('address', formattedAddress);
+          // console.log('address', formattedAddress);
           // 2. Isoliamo l'oggetto address o un oggetto vuoto per evitare crash
           const addressDetails = data?.address ?? {};
 
@@ -130,7 +292,7 @@ ${voiceEnabled ? "L'utente sta parlando a voce. Rispondi in modo estremamente co
           query: z.string().describe('stazioni gpl o gas.'),
         }),
         execute: async ({ query }) => {
-          console.log("queryinfogpl" + query);
+          // console.log("queryinfogpl" + query);
           // Genera embedding per la query dello strumento
           const { embedding } = await embed({
             model: openai.embedding('text-embedding-3-small'),
@@ -428,8 +590,23 @@ ${voiceEnabled ? "L'utente sta parlando a voce. Rispondi in modo estremamente co
         },
       }),
     },
-    
+    // Rilascia le risorse solo quando l'AI ha finito TUTTI i passaggi
+    onFinish: async () => {
+      try {
+        await mcpClientContentful.close(); //
+      } catch (e) {
+        console.error("Errore durante la chiusura del client MCP:", e);
+      }
+    },
+    onError: async () => {
+      try {
+        await mcpClientContentful.close(); // Forza la chiusura anche in caso di crash dell'LLM
+      } catch (e) {
+        console.error("Errore durante la chiusura MCP in onError:", e);
+      }
+    }
   });
+  // Chiude il processo npx al termine dello streaming per non lasciare processi appesi
 
   return result.toUIMessageStreamResponse();
 

@@ -30,7 +30,6 @@ export default function ChatPage() {
 
   // Inizializzazione useChat
   const { messages, sendMessage } = useChat({
-    
     transport: new DefaultChatTransport({
     body: () => ({
       coordinates: coords 

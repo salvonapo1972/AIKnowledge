@@ -10,15 +10,19 @@
     "ingest": "tsx ingestion/run-ingestion.tsx"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^4.0.91",
-    "@ai-sdk/react": "^4.0.47",
+    "@ai-sdk/mcp": "^2.0.83",
+    "@ai-sdk/openai": "^4.0.101",
+    "@ai-sdk/react": "^4.0.156",
     "@contentful/rich-text-react-renderer": "^16.2.1",
+    "@github-tools/sdk": "^1.18.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@neondatabase/serverless": "^1.1.0",
+    "@octokit/rest": "^22.0.1",
     "@openrouter/ai-sdk-provider": "^3.0.0",
     "@tavily/core": "^0.7.6",
     "@types/leaflet": "^1.9.22",
     "@vercel/functions": "^1.6.0",
-    "ai": "^7.0.137",
+    "ai": "^7.0.152",
     "cheerio": "^1.2.0",
     "clsx": "^2.1.1",
     "contentful": "^11.12.6",
@@ -26,7 +30,10 @@
     "leaflet": "^1.9.4",
     "lucide-react": "^1.24.0",
     "marked": "^18.0.6",
-    "next": "16.2.10",
+    "next": "^16.4.3",
+    "next-auth": "^5.0.0-beta.32",
+    "otplib": "^13.5.0",
+    "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-leaflet": "^5.0.0",
@@ -35,7 +42,7 @@
     "tsx": "^4.23.9",
     "unpdf": "^1.8.0",
     "ws": "^8.21.2",
-    "zod": "^4.4.3"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@contentful/rich-text-types": "^17.2.7",
@@ -45,7 +52,7 @@
     "@types/react-dom": "^19",
     "@types/ws": "^8.18.1",
     "eslint": "^9",
-    "eslint-config-next": "16.2.10",
+    "eslint-config-next": "^16.4.3",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
