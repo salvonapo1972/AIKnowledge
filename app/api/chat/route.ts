@@ -1,5 +1,3 @@
-
-
 import {
   streamText,
   UIMessage,
@@ -20,9 +18,9 @@ import { getTimezone } from '@/app/lib/timezones';
 import { db } from '@/app/lib/db';
 import { Octokit } from '@octokit/rest';
 import { createGithubTools } from '@github-tools/sdk';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
-import { createMCPClient } from '@ai-sdk/mcp';
-import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
+import { toolsContentfull } from '@/mcps';
+import { othertoolsgithub } from '@/mcps/githubtools';
+
 
 
 import { tavily } from '@tavily/core';
@@ -76,49 +74,14 @@ const fileContent = await fs.readFile(process.cwd() + '/app/elenco_canti.md', 'u
 
 export async function POST(req: Request) {
 
-   const session = await auth();
-  
+  const session = await auth();
+
   // Verifica se l'utente è loggato ed è l'amministratore ufficiale
   const isMe = session?.user?.email === process.env.ADMIN_EMAIL;
-  
-  /*const transport = new StdioClientTransport({
-    command: 'npx',
-    args: ['-y', '@contentful/mcp-server'],
-    env: {
-      CONTENTFUL_MANAGEMENT_ACCESS_TOKEN: process.env.WRITE_ACCESS_TOKEN!,
-      SPACE_ID: process.env.SPACE_ID!,
-      ENVIRONMENT_ID: 'master',
-      PATH: process.env.PATH ?? '', // Indispensabile per far trovare npx a Node.js
-    },
-  });*/
-/*
-const transport = new SSEClientTransport(
-  new URL("https://mcp.contentful.com/mcp"),
-  {
-    requestInit: {
-      headers: {
-        // 1. Specifica il tipo di contenuto
-        "Content-Type": "application/json",
-        
-        // 2. Passa il token di autorizzazione di Contentful (CMA Token)
-        "Authorization": `Bearer ${process.env.WRITE_ACCESS_TOKEN}`,
-        
-        // 3. Comunica al server l'ID dello spazio e dell'ambiente su cui operare
-        "X-Contentful-Space-Id": process.env.SPACE_ID!,
-        "X-Contentful-Environment-Id": "master"
-      }
-    }
-  }
-);
-*/
-  // 2. Crea il client MCP
-  console.log("isMe",isMe)
-/*  const mcpClientContentful = await createMCPClient({ transport });
-  const contentfulTools = (isMe)?await mcpClientContentful.tools():({});*/
+  console.log("isMe", isMe)
+
 
   const { messages, coordinates, voiceEnabled } = await req.json();
-
-  //console.log("Coordinate da metadati:", coordinates);
   const today = new Date()
 
 
@@ -139,128 +102,9 @@ ${voiceEnabled ? "L'utente sta parlando a voce. Rispondi in modo estremamente co
       recordOutputs: false
     },
     tools: {
-      ...(isMe?githubTools:({})),
-    //  ...(isMe?contentfulTools:({})),
-      deleteFileFromGitHub: tool({
-        description: 'Elimina definitivamente un file specifico da un repository GitHub.',
-        inputSchema: z.object({
-          owner: z.string().describe('Il proprietario del repository (username o organizzazione).'),
-          repo: z.string().describe('Il nome del repository.'),
-          path: z.string().describe('Il percorso del file da eliminare (es. test1.md).'),
-          branch: z.string().optional().default('main').describe('La branca da cui eliminare il file.'),
-        }),
-        execute: async ({ owner, repo, path, branch }) => {
-          try {
-            // 1. Recupera lo SHA corrente del file (GitHub lo richiede per confermare l'eliminazione)
-            const { data: fileData } = await octokit.repos.getContent({
-              owner,
-              repo,
-              path,
-              ref: branch,
-            });
-
-            if (Array.isArray(fileData) || fileData.type !== 'file') {
-              throw new Error('Il percorso specificato non corrisponde a un file valido.');
-            }
-
-            // 2. Esegui la cancellazione effettiva passandogli lo SHA trovato
-            await octokit.repos.deleteFile({
-              owner,
-              repo,
-              path,
-              message: `chore: delete ${path} via AI Agent`,
-              sha: fileData.sha,
-              branch,
-            });
-
-            return {
-              success: true,
-              message: `Il file ${path} è stato eliminato con successo.`,
-            };
-          } catch (error: any) {
-            return {
-              success: false,
-              error: error.message || 'Impossibile eliminare il file. Verifica che esista.',
-            };
-          }
-        },
-      }),
-      listIssues: tool({
-        description: 'Recupera la lista delle issue da una specifica repository di GitHub.',
-        inputSchema: z.object({
-          owner: z.string().describe('Il proprietario della repository o organizzazione GitHub.'),
-          repo: z.string().describe('Il nome del repository.'),
-          state: z.enum(['open', 'closed', 'all']).optional().default('open').describe('Lo stato delle issue da cercare.'),
-        }),
-        execute: async ({ owner, repo, state }) => {
-          console.log('owner', owner);
-          console.log('repo', repo);
-          const { data } = await octokit.issues.listForRepo({
-            owner,
-            repo,
-            state,
-            per_page: 5,
-          });
-
-          return data.map(issue => ({
-            id: issue.id,
-            number: issue.number,
-            title: issue.title,
-            state: issue.state,
-            body: issue.body,
-          }));
-        },
-      }),
-
-      // TOOL 2: Creazione di una nuova Issue
-      createGitHubIssue: tool({
-        description: 'Crea una nuova issue su una repository GitHub.',
-        inputSchema: z.object({
-          owner: z.string().describe('Il proprietario della repository.'),
-          repo: z.string().describe('Il nome del repository.'),
-          title: z.string().min(5).describe('Il titolo dell\'issue (almeno 5 caratteri).'),
-          body: z.string().describe('La descrizione dettagliata del problema o del task.'),
-          labels: z.array(z.string()).optional().describe('Etichette da assegnare all\'issue.'),
-        }),
-        execute: async ({ owner, repo, title, body, labels }) => {
-          const { data } = await octokit.issues.create({
-            owner,
-            repo,
-            title,
-            body,
-            labels,
-          });
-
-          return {
-            success: true,
-            issueNumber: data.number,
-            url: data.html_url,
-          };
-        },
-      }),
-      closeGitHubIssue: tool({
-        description: 'Crea una nuova issue su una repository GitHub.',
-        inputSchema: z.object({
-          owner: z.string().describe('Il proprietario del repository (username o organizzazione).'),
-          repo: z.string().describe('Il nome del repository.'),
-          issue_number: z.number().int().positive().describe('Il numero identificativo dell\'issue da chiudere (es. 42).'),
-        }),
-        execute: async ({ owner, repo, issue_number }) => {
-          const { data } = await octokit.issues.update({
-            owner,
-            repo,
-            issue_number,
-            state: 'closed',
-            state_reason: 'completed',
-          });
-
-          return {
-            success: true,
-            issueNumber: data.number,
-            url: data.html_url,
-          };
-        },
-      }),
+      ...(isMe ? githubTools : ({})),
+      ...(isMe ? toolsContentfull : ({})),
+      ...(isMe ? othertoolsgithub : ({})),
       getCityFromCoordinates: tool({
         description: 'Converte le coordinate di latitudine e longitudine nel nome di una città reale. se non valorizzate trova la città in cui ci si trova e indirizzo esatto',
         inputSchema: z.object({
@@ -609,22 +453,8 @@ ${voiceEnabled ? "L'utente sta parlando a voce. Rispondi in modo estremamente co
         },
       }),
     },
-    
-    // Rilascia le risorse solo quando l'AI ha finito TUTTI i passaggi
-/*    onFinish: async () => {
-      try {
-        await mcpClientContentful.close(); //
-      } catch (e) {
-        console.error("Errore durante la chiusura del client MCP:", e);
-      }
-    },
-    onError: async () => {
-      try {
-        await mcpClientContentful.close(); // Forza la chiusura anche in caso di crash dell'LLM
-      } catch (e) {
-        console.error("Errore durante la chiusura MCP in onError:", e);
-      }
-    }*/
+
+   
   });
   // Chiude il processo npx al termine dello streaming per non lasciare processi appesi
 

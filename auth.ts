@@ -37,7 +37,7 @@ export const {
     strategy: "jwt",
     // 🛡️ SICUREZZA: Scade dopo 15 minuti di inattività (900 secondi)
     // Se l'amministratore dimentica la tab aperta, si disconnetterà da solo.
-    maxAge: 1 * 60, 
+    maxAge: 5 * 60, 
   },
   cookies: {
     sessionToken: {
