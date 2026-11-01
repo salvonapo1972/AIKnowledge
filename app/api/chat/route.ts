@@ -20,6 +20,8 @@ import { Octokit } from '@octokit/rest';
 import { createGithubTools } from '@github-tools/sdk';
 import { toolsContentfull } from '@/mcps';
 import { othertoolsgithub } from '@/mcps/githubtools';
+import { vercelTools } from '@/mcps/verceldeploy';
+import { busArrivalTools } from '@/mcps/busArrival';
 
 
 
@@ -87,7 +89,7 @@ export async function POST(req: Request) {
 
   const systemPrompt = `Oggi è ${today.toISOString()} e l'utente si trova a: latitudine ${coordinates?.lat} e longitudine ${coordinates?.lng}.
 ${voiceEnabled ? "L'utente sta parlando a voce. Rispondi in modo estremamente conciso, colloquiale e naturale, evitando elenchi puntati lunghi o Markdown complesso. Per qualsiasi operazione " +
-      "richiesta sui repository devi  utilizzare esclusivamente githubTools. Se ci sono errori su github devi mostrarli a video nella risposta. Per richieste di creazione contenuti usa il tool mcpClientContentful" : ""}`;
+      "richiesta sui repository devi  utilizzare esclusivamente githubTools. Se ci sono errori su github devi mostrarli a video nella risposta. Per richieste di creazione contenuti usa il tool mcpClientContentful.Se devi fare un deploy su Vercel usa il tool vercelTools.Se vuoi sapere dove si trova un autobus chiama il tool busArrivalTools. Lo stopid della fermata lo ricavi dal tool busStopName" : ""}`;
 
 
 
@@ -105,6 +107,8 @@ ${voiceEnabled ? "L'utente sta parlando a voce. Rispondi in modo estremamente co
       ...(isMe ? githubTools : ({})),
       ...(isMe ? toolsContentfull : ({})),
       ...(isMe ? othertoolsgithub : ({})),
+      ...(isMe ? vercelTools : ({})),
+      ...busArrivalTools,
       getCityFromCoordinates: tool({
         description: 'Converte le coordinate di latitudine e longitudine nel nome di una città reale. se non valorizzate trova la città in cui ci si trova e indirizzo esatto',
         inputSchema: z.object({
@@ -197,6 +201,21 @@ ${voiceEnabled ? "L'utente sta parlando a voce. Rispondi in modo estremamente co
           };
 
         },
+      }),
+      busStopName: tool({
+        description: `Determina il codice della fermata stopId a partire dal suo nome`,
+        inputSchema: z.object({
+          nomeFermata: z.string().describe("Nome della fermata dell'autobus"),
+          }),
+          execute: async (nomeFermata) => {
+          //console.log("nome fermata bus");
+          const response = await fs.readFile(process.cwd() + '/mcps/stops.txt', 'utf8');;
+
+          return {
+            response
+          };
+        }
+
       }),
       canticoro: tool({
         description: `
