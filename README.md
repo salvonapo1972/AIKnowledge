@@ -62,3 +62,4 @@ L'ingestion estrae il testo dal PDF, lo divide in frammenti, genera embedding e 
 ## Deploy
 
 Il file `netlify.toml` configura Netlify per eseguire `npm run build` e pubblicare `.next`. Imposta nel provider di deploy le stesse variabili d'ambiente richieste in locale.
+
