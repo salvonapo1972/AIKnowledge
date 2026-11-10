@@ -299,10 +299,10 @@ ${voiceEnabled ? "L'utente sta parlando a voce. Rispondi in modo estremamente co
             out center;
           `;
 
-          const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`;
+         // const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`;
           //  console.log("url",url);
           const response = await fetch("https://overpass-api.de/api/interpreter", {
-            signal: AbortSignal.timeout(20000),
+            signal: AbortSignal.timeout(180000),
             next: { revalidate: 60 },
             method: "POST",
             headers: {
@@ -332,7 +332,7 @@ ${voiceEnabled ? "L'utente sta parlando a voce. Rispondi in modo estremamente co
               lat: el.lat ?? el.center?.lat,
               lon: el.lon ?? el.center?.lon,
               name: el.tags?.name || 'Parcheggio Generico',
-              type: el.tags?.parking || 'In strada / Struttura',
+              type: el.type==="underground"? 'Sotterraneo' : 'In superficie/su strada'
             }))
             .filter((el: any) => el.lat && el.lon);
           console.log("locations", locations);
